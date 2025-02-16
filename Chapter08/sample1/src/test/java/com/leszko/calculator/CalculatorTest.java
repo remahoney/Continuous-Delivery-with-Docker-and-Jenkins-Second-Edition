@@ -1,3 +1,6 @@
+/**
+This is the calculator JavaScript file for Exercise 4, Problem 2
+*/
 package com.leszko.calculator;
 import org.junit.Test;
 import static org.junit.Assert.assertEquals;
