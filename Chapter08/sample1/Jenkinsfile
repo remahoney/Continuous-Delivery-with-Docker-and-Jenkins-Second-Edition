@@ -1,48 +1,66 @@
 pipeline {
-  agent {
-    label 'docker-agent'
-  }
-  stages {
-    stage('Checkout code and prepare environment') {
-      steps {
-        git url: 'https://github.com/remahoney/Continuous-Delivery-with-Docker-and-Jenkins-Second-Edition.git', branch: 'master'
-        sh """
-          cd Chapter08/sample1
-          chmod +x gradlew
-        """
-      }
+    agent
+      label 'docker-agent'
     }
-    stage('Run tests and generate reports') {
-      steps {
-        sh """
-          cd Chapter08/sample1
-          ./gradlew test
-          ./gradlew jacocoTestReport
-          ./gradlew jacocoTestCoverageVerification
-        """
-        publishHTML (
-          target: [
-            reportDir: 'Chapter08/sample1/build/reports/tests/test',
-            reportFiles: 'index.html',
-            reportName: "JaCoCo Report"
-          ]
-        )
-      }
+    stages {
+        stage('Set Variables') {
+            agent any
+            steps {
+                script {
+                    if (env.BRANCH_NAME == 'main') {
+                        imageName = 'calculator'
+                        version = '1.0'
+                        runCodeCoverage = true
+                    } else if (env.BRANCH_NAME.startsWith('feature/')) {
+                        imageName = 'calculator-feature'
+                        version = '0.1'
+                        runCodeCoverage = false
+                    } else if (env.BRANCH_NAME == 'playground') {
+                        imageName = null
+                        runCodeCoverage = false
+                    } else {
+                        error "Unsupported branch: ${env.BRANCH_NAME}"
+                    }
+                }
+            }
+        }
+        stage('Run Tests') {
+            agent any
+            steps {
+                script {
+                    sh './run-tests.sh' // Replace with your test command
+                    if (runCodeCoverage && env.BRANCH_NAME == 'main') {
+                        sh './run-code-coverage.sh' // Replace with your coverage command
+                    }
+                }
+            }
+        }
+        stage('Build Container') {
+            agent any
+            when {
+                expression {
+                    return imageName != null // Skip container creation for 'playground' branch
+                }
+            }
+            steps {
+                script {
+                    sh "docker build -t ${imageName}:${version} ."
+                }
+            }
+        }
+        stage('Push to Local Repository') {
+            agent any
+            when {
+                expression {
+                    return imageName != null // Skip pushing for 'playground' branch
+                }
+            }
+            steps {
+                script {
+                    sh "docker tag ${imageName}:${version} localhost:5000/${imageName}:${version}"
+                    sh "docker push localhost:5000/${imageName}:${version}"
+                }
+            }
+        }
     }
-    stage("Run and generate report named jacoco checkstyle") {
-      steps {
-        sh """
-          cd Chapter08/sample1
-          ./gradlew checkstyleTest
-        """
-        publishHTML (
-          target: [
-            reportDir: 'Chapter08/sample1/build/reports/tests/test',
-            reportFiles: 'index.html',
-            reportName: "jacoco checkstyle"
-          ]
-        )
-      }
-    }
-  }
 }
