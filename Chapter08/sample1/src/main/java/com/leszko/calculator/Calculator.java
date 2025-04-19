@@ -1,5 +1,6 @@
 /**
-* start of calculator
+* This is the calculator program
+* It will compute two numbers from input
 */
 package com.leszko.calculator;
 
@@ -7,9 +8,6 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 @Service
-/**
-* Inserting javadoc comment
-*/
 public class Calculator {
         final static int umlNUMBER1 = 3;
 	@Cacheable("sum")
